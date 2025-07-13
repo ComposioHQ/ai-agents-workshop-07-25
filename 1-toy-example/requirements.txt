@@ -1,0 +1,4 @@
+openai>=1.0.0
+composio-core>=0.3.0
+composio-openai>=0.3.0
+python-dotenv>=1.0.0 
