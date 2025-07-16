@@ -20,11 +20,9 @@ from io import StringIO
 from contextlib import redirect_stdout, redirect_stderr
 
 # OpenAI Agents SDK imports
-from agents import Agent, Runner, handoff, RunConfig
-from agents.tools import function_tool
-
+from agents import Agent, Runner, handoff, RunConfig, function_tool
 # Composio imports
-from composio_openai import ComposioToolSet, Action
+from composio_openai_agents import ComposioToolSet, Action, App
 
 # Load environment variables
 load_dotenv()
@@ -101,9 +99,7 @@ def run_python_code(code: str) -> str:
 file_tools = composio_toolset.get_tools(actions=[
     Action.FILETOOL_CREATE_FILE,
     Action.FILETOOL_EDIT_FILE,
-    Action.FILETOOL_READ_FILE,
     Action.FILETOOL_LIST_FILES,
-    Action.FILETOOL_DELETE_FILE,
 ])
 
 # Create specialized agents
@@ -128,9 +124,12 @@ def create_planner_agent() -> Agent[ProjectContext]:
         - Documentation needs
         
         When you're ready to start implementation, hand off to the Coder agent.
+
+        IMPORTANT:
+        You are working autonomously. You are not allowed to ask the user for any information or consent.
         """,
         handoff_description="Breaks down requirements into actionable development tasks",
-        model="gpt-4.1-mini",  # Use cheaper model for planning
+        model="o4-mini",  # Use reasoing model for planning
         tools=file_tools,  # Can read existing files for context
     )
 
@@ -157,9 +156,12 @@ def create_coder_agent() -> Agent[ProjectContext]:
         - Follow Python best practices (PEP 8, etc.)
         
         When you've completed the implementation and tested it, hand off to the Reviewer.
+
+        IMPORTANT:
+        You are working autonomously. You are not allowed to ask the user for any information or consent.
         """,
         handoff_description="Implements code based on the development plan",
-        model="gpt-4.1",  # Use powerful model for coding
+        model="gpt-4.1",  # Use coding model for coding
         tools=[run_python_code] + file_tools,
     )
 
@@ -188,6 +190,9 @@ def create_reviewer_agent() -> Agent[ProjectContext]:
         
         If issues are found, provide specific feedback and suggest fixes.
         If code is satisfactory, provide a summary and approve the implementation.
+
+        IMPORTANT:
+        You are working autonomously. You are not allowed to ask the user for any information or consent.
         """,
         handoff_description="Reviews code quality and validates implementation",
         model="gpt-4.1-mini",  # Use cheaper model for review
@@ -225,9 +230,12 @@ def create_triage_agent() -> Agent[ProjectContext]:
         3. Provide context and any relevant information
         
         Start with the Planner for new projects or requirements.
+
+        IMPORTANT:
+        You are working autonomously. You are not allowed to ask the user for any information or consent.
         """,
         handoff_description="Orchestrates the development workflow",
-        model="gpt-4.1-mini",  # Use cheaper model for orchestration
+        model="gpt-4.1",  # Use standard model for orchestration
         handoffs=[
             handoff(planner),
             handoff(coder),
@@ -280,24 +288,9 @@ async def run_multi_agent_system(
         print(f"❌ Error running multi-agent system: {str(e)}")
         return f"Error: {str(e)}"
 
-# Example usage and demonstrations
-async def demo_basic_workflow():
-    """Demonstrate basic multi-agent workflow"""
-    print("\n🎯 Demo 1: Basic Function Creation")
-    print("=" * 50)
-    
-    request = """
-    Create a Python function that calculates the factorial of a number.
-    The function should handle edge cases and include proper error handling.
-    Also create a test function to verify it works correctly.
-    """
-    
-    result = await run_multi_agent_system(request, "FactorialProject")
-    print(f"\n✅ Final Result:\n{result}")
-
-async def demo_complex_workflow():
+async def demo_workflow():
     """Demonstrate complex multi-agent workflow with multiple features"""
-    print("\n🎯 Demo 2: Complex Data Processing System")
+    print("\n🎯 Demo 1: Complex Data Processing System")
     print("=" * 50)
     
     request = """
@@ -314,48 +307,6 @@ async def demo_complex_workflow():
     result = await run_multi_agent_system(request, "DataProcessingProject")
     print(f"\n✅ Final Result:\n{result}")
 
-async def demo_cost_optimization():
-    """Demonstrate cost optimization with different models"""
-    print("\n💰 Demo 3: Cost Optimization")
-    print("=" * 50)
-    
-    print("Model Configuration:")
-    print("- Planner: gpt-4.1-mini (cheaper for planning)")
-    print("- Coder: gpt-4.1 (powerful for complex implementation)")
-    print("- Reviewer: gpt-4.1-mini (cheaper for review)")
-    print("- Triage: gpt-4.1-mini (cheaper for orchestration)")
-    
-    request = """
-    Create a simple calculator with basic operations (+, -, *, /).
-    Include a command-line interface and input validation.
-    """
-    
-    result = await run_multi_agent_system(request, "CalculatorProject")
-    print(f"\n✅ Final Result:\n{result}")
-
-async def demo_handoff_patterns():
-    """Demonstrate different handoff patterns"""
-    print("\n🔄 Demo 4: Handoff Patterns")
-    print("=" * 50)
-    
-    print("Handoff Flow:")
-    print("1. Triage → Planner (initial planning)")
-    print("2. Planner → Coder (implementation)")
-    print("3. Coder → Reviewer (code review)")
-    print("4. Reviewer → Coder (if fixes needed)")
-    print("5. Reviewer → Final output (if approved)")
-    
-    request = """
-    Create a password generator with the following features:
-    - Different complexity levels
-    - Customizable length
-    - Exclude ambiguous characters option
-    - Save/load presets
-    """
-    
-    result = await run_multi_agent_system(request, "PasswordGenProject")
-    print(f"\n✅ Final Result:\n{result}")
-
 async def main():
     """Main function to run all demonstrations"""
     print("🤖 Multi-Agent Software Development System")
@@ -367,10 +318,7 @@ async def main():
         return
     
     demos = [
-        ("Basic Workflow", demo_basic_workflow),
-        ("Complex Workflow", demo_complex_workflow),
-        ("Cost Optimization", demo_cost_optimization),
-        ("Handoff Patterns", demo_handoff_patterns),
+        ("Workflow", demo_workflow),
     ]
     
     for demo_name, demo_func in demos:
