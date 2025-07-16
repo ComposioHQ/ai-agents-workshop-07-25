@@ -1,340 +1,282 @@
-# Multi-Agent Systems with State Management
+# Multi-Agent Software Development System with State Management
 
-Welcome to Module 4 of the AI Agents Workshop! This module builds upon the tracing and observability system to add comprehensive state management and memory capabilities to our multi-agent system.
+This module builds upon the previous multi-agent system by adding sophisticated state management capabilities. The system now remembers conversations across runs, tracks file creation to prevent duplicates, and maintains a simple memory layer for project context.
 
-## 🎯 Learning Objectives
+## New Features
 
-By the end of this module, you'll understand:
-- How to implement persistent memory in multi-agent systems
-- Conversation summarization techniques to manage context length
-- Project memory patterns similar to Claude's claude.md
-- Memory-aware agent design and implementation
-- State management best practices for production systems
+### 1. 🧠 Conversation Memory with OpenAI Agents SDK Sessions
 
-## 🧠 Why State Management Matters
+The system now uses OpenAI Agents SDK Sessions to automatically maintain conversation history across multiple runs:
 
-As AI agents become more sophisticated, **memory** becomes critical for:
+```python
+# Create session for conversation memory
+session = SQLiteSession(session_id)
 
-### 1. **Context Preservation**
-- Remembering previous conversations and decisions
-- Maintaining project context across sessions
-- Learning from past successes and failures
-
-### 2. **Efficiency Optimization**
-- Avoiding redundant work through memory
-- Context window management via summarization
-- Cost optimization through intelligent memory use
-
-### 3. **Quality Improvement**
-- Learning from previous approaches
-- Consistent architectural decisions
-- Better error handling based on history
-
-## 🏗️ Architecture Overview
-
-Our state management system consists of four key components:
-
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│ ConversationEntry│    │  ProjectMemory  │    │  MemoryManager  │
-│  📝 Individual  │    │  📚 Persistent  │    │  🧠 Orchestrator│
-│  conversation   │    │  project info   │    │  & controller   │
-│  entries        │    │  (like claude.md)│    │                 │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                        │                        │
-         └────────────────────────┼────────────────────────┘
-                                  │
-                    ┌─────────────────┐
-                    │StateManagementHooks│
-                    │  🔄 Integration  │
-                    │  with agents     │
-                    └─────────────────┘
+# Run agent with session - it automatically remembers previous conversations
+result = await Runner.run(
+    starting_agent=triage_agent,
+    input=user_request,
+    context=context,
+    session=session,  # This enables conversation memory across runs
+    run_config=run_config,
+    hooks=hooks,
+    max_turns=50
+)
 ```
 
-## 🔧 Key Components
+**Benefits:**
+- Agents remember previous user queries and responses
+- Context is maintained across multiple agent runs
+- No need to manually manage conversation history
+- Each session has its own separate conversation thread
 
-### 1. ConversationEntry
-Tracks individual interactions with metadata:
+### 2. 📁 File Tracking Hooks
+
+A simple hook system tracks when files are created to prevent duplicates:
+
+```python
+class StateManagementHooks(RunHooks):
+    async def on_tool_call_end(self, context: RunContextWrapper, tool_call, result) -> None:
+        """Track file creation to prevent duplicates"""
+        if hasattr(tool_call, 'function') and tool_call.function.name == 'filetool_create_file':
+            # Parse filename and track it
+            filename = args.get('file_path', '')
+            if filename and filename not in self.context.files_created:
+                self.context.files_created.append(filename)
+                # Update persistent memory
+                memory = self.context.load_memory()
+                memory["files_created"].append(filename)
+                self.context.save_memory(memory)
+```
+
+**Benefits:**
+- Prevents agents from recreating files that already exist
+- Tracks files both in current session and across sessions
+- Simple hook-based implementation that's easy to understand
+
+### 3. 💾 Simple Memory Layer
+
+A JSON-based memory system that persists project information:
+
 ```python
 @dataclass
-class ConversationEntry:
-    timestamp: datetime
-    agent_name: str
-    message_type: str  # "input", "output", "handoff", "error"
-    content: str
-    tokens_used: int = 0
-    metadata: Dict[str, Any] = field(default_factory=dict)
-```
-
-### 2. ProjectMemory
-Persistent project information (like claude.md):
-```python
-@dataclass
-class ProjectMemory:
-    project_name: str
-    created_at: datetime
-    last_updated: datetime
+class ProjectContext:
+    def save_memory(self, data: Dict[str, Any]):
+        """Save data to memory file"""
+        with open(self.memory_file, 'w') as f:
+            json.dump(data, f, indent=2)
     
-    # Core project information
-    original_requirements: str
-    current_objectives: List[str]
-    architecture_decisions: List[str]
+    def load_memory(self) -> Dict[str, Any]:
+        """Load data from memory file"""
+        # Returns: {"conversations": [], "files_created": [], "project_summary": ""}
     
-    # Files and artifacts
-    files_created: List[str]
-    files_modified: List[str]
-    key_functions: List[str]
+    def add_conversation_summary(self, summary: str):
+        """Add conversation summary to memory"""
+        memory = self.load_memory()
+        memory["conversations"].append({
+            "timestamp": datetime.now().isoformat(),
+            "summary": summary
+        })
+        self.save_memory(memory)
+```
+
+**Benefits:**
+- Persists project state between sessions
+- Stores conversation summaries for future reference
+- Tracks all files created across sessions
+- Simple JSON format that's human-readable
+
+### 4. 🔧 New Agent Tools
+
+The system provides new tools for agents to interact with the state management system:
+
+#### `check_file_exists(filename: str) -> str`
+```python
+@function_tool
+def check_file_exists(context: RunContextWrapper[ProjectContext], filename: str) -> str:
+    """Check if a file was already created to prevent duplicates"""
+    if filename in context.context.files_created:
+        return f"File {filename} already exists in this session"
     
-    # Learning and patterns
-    successful_patterns: List[str]
-    failed_approaches: List[str]
-    lessons_learned: List[str]
+    memory = context.context.load_memory()
+    if filename in memory["files_created"]:
+        return f"File {filename} was created in a previous session"
     
-    # Progress tracking
-    milestones_completed: List[str]
-    current_blockers: List[str]
-    next_steps: List[str]
+    return f"File {filename} does not exist yet"
 ```
 
-### 3. MemoryManager
-Orchestrates memory operations:
-- **Conversation Summarization**: Automatically summarizes old conversations
-- **Project Memory Persistence**: Saves/loads project state to/from JSON files
-- **Context Retrieval**: Provides relevant context to agents
-- **Memory Insights**: Extracts patterns and lessons from conversation history
-
-### 4. StateManagementHooks
-Integrates memory with the agent workflow:
-- Captures handoffs and events
-- Records conversation entries
-- Updates project memory
-- Provides memory context to agents
-
-## 🚀 Key Features
-
-### 1. Automatic Conversation Summarization
-When conversation history exceeds 50 entries, the system automatically:
-- Keeps the most recent 10 entries
-- Summarizes older entries by agent activity
-- Extracts key insights and patterns
-- Updates project memory with lessons learned
-
-### 2. Persistent Project Memory
-Each project maintains a persistent memory file (`{project_name}_memory.json`) containing:
-- Original requirements and objectives
-- Architecture decisions made
-- Files created and modified
-- Successful patterns and failed approaches
-- Lessons learned and next steps
-
-### 3. Memory-Aware Agents
-All agents are enhanced with memory awareness:
-- **Planner**: Reviews project history before planning
-- **Coder**: Learns from previous implementations
-- **Reviewer**: Maintains consistent quality standards
-- **Triage**: Makes better routing decisions with context
-
-### 4. Context Window Management
-The system manages context efficiently by:
-- Summarizing old conversations automatically
-- Providing relevant context snippets to agents
-- Maintaining token usage tracking
-- Optimizing memory retrieval
-
-## 📊 Memory Management Flow
-
-```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│ New Request │───▶│Load Project │───▶│ Provide     │
-│             │    │ Memory      │    │ Context     │
-└─────────────┘    └─────────────┘    └─────────────┘
-       │                 │                    │
-       ▼                 ▼                    ▼
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│ Run Agents  │───▶│Record Events│───▶│ Update      │
-│ with Memory │    │& Handoffs   │    │ Memory      │
-└─────────────┘    └─────────────┘    └─────────────┘
-       │                 │                    │
-       ▼                 ▼                    ▼
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│ Summarize   │───▶│Save Project │───▶│ Ready for   │
-│ if Needed   │    │ Memory      │    │ Next Run    │
-└─────────────┘    └─────────────┘    └─────────────┘
-```
-
-## 💡 Best Practices Demonstrated
-
-### 1. **Conversation Summarization**
+#### `get_project_memory() -> str`
 ```python
-def _summarize_conversation_history(self):
-    """Summarize old conversation entries to save memory"""
-    if len(self.conversation_history) > self.max_conversation_length:
-        # Keep recent entries, summarize older ones
-        recent_entries = self.conversation_history[-10:]
-        older_entries = self.conversation_history[:-10]
-        
-        # Create summary and extract insights
-        summary_content = self._create_conversation_summary(older_entries)
-        self._extract_insights_from_summary(summary_content)
+@function_tool
+def get_project_memory(context: RunContextWrapper[ProjectContext]) -> str:
+    """Get project memory including past conversations and files"""
+    memory = context.context.load_memory()
+    
+    summary = f"Project: {context.context.project_name}\n"
+    summary += f"Project Summary: {memory.get('project_summary', 'No summary yet')}\n\n"
+    
+    if memory["files_created"]:
+        summary += f"Files Created: {', '.join(memory['files_created'])}\n\n"
+    
+    if memory["conversations"]:
+        summary += "Recent Conversations:\n"
+        for conv in memory["conversations"][-3:]:  # Show last 3 conversations
+            summary += f"- {conv['timestamp']}: {conv['summary']}\n"
+    
+    return summary
 ```
 
-### 2. **Project Memory Persistence**
+#### `summarize_session(summary: str) -> str`
 ```python
-def save_project_memory(self):
-    """Save project memory to file"""
-    memory_file = os.path.join(self.memory_dir, f"{self.project_name}_memory.json")
-    with open(memory_file, 'w') as f:
-        json.dump(self.project_memory.to_dict(), f, indent=2)
+@function_tool
+def summarize_session(context: RunContextWrapper[ProjectContext], summary: str) -> str:
+    """Summarize the current session for future reference"""
+    context.context.add_conversation_summary(summary)
+    return f"Session summary saved: {summary}"
 ```
 
-### 3. **Memory-Aware Agent Instructions**
-```python
-instructions="""
-You are a Senior Software Architect with access to project memory.
+## Usage Examples
 
-MEMORY INTEGRATION:
-- Always start by reviewing the project context and memory
-- Check what has been done before to avoid duplication
-- Learn from previous approaches and failures
-- Update your planning based on project history
+### Basic Usage with State Management
+
+```python
+# Run the system with state management
+result = await run_multi_agent_system_with_state(
+    user_request="Create a Python calculator with basic operations",
+    project_name="CalculatorProject",
+    session_id="user_123"
+)
+
+# Run again in the same session - it will remember the previous context
+result2 = await run_multi_agent_system_with_state(
+    user_request="Add a square root function to the calculator",
+    project_name="CalculatorProject", 
+    session_id="user_123"  # Same session ID
+)
+```
+
+### Agent Instructions Enhanced with State Management
+
+All agents now have enhanced instructions that include state management:
+
+```python
+"""
+IMPORTANT STATE MANAGEMENT:
+- Always check project memory first to understand what has been done before
+- Use check_file_exists before creating files to avoid duplicates
+- Build upon existing files rather than recreating them
+- Summarize your session before handing off
 """
 ```
 
-### 4. **Context Retrieval**
+## Demo Script
+
+The module includes a comprehensive demo that shows:
+
+1. **First Request**: Creates initial files for a calculator project
+2. **Second Request**: Adds functionality while remembering previous context
+3. **Third Request**: Creates tests while avoiding file duplication
+
 ```python
-def get_context_summary(self) -> str:
-    """Get a summary of current project context for agents"""
-    context_parts = [
-        f"📁 PROJECT: {self.project_memory.project_name}",
-        f"🎯 Requirements: {self.project_memory.original_requirements[:200]}...",
-        "📂 Files Created:",
-        # ... contextual information
-    ]
-    return "\n".join(context_parts)
+async def demo_state_management():
+    session_id = "demo_session"
+    
+    # First request - creates some files
+    request1 = """
+    Create a simple Python calculator that:
+    1. Has functions for basic operations (+, -, *, /)
+    2. Includes error handling for division by zero
+    3. Has a simple CLI interface
+    """
+    result1 = await run_multi_agent_system_with_state(request1, "CalculatorProject", session_id)
+    
+    # Second request - should remember the previous conversation
+    request2 = """
+    Now add a function to calculate the square root and modify the CLI to support it.
+    """
+    result2 = await run_multi_agent_system_with_state(request2, "CalculatorProject", session_id)
+    
+    # Third request - should avoid recreating files
+    request3 = """
+    Create comprehensive unit tests for the calculator functions.
+    """
+    result3 = await run_multi_agent_system_with_state(request3, "CalculatorProject", session_id)
 ```
 
-## 🔄 Workflow Integration
+## Key Benefits
 
-The memory system integrates seamlessly with the existing workflow:
+### 1. **Conversation Continuity**
+- Agents remember what was said before
+- No need to repeat context in follow-up requests
+- Natural conversation flow across multiple runs
 
-1. **Project Initialization**: Load or create project memory
-2. **Agent Execution**: Provide memory context to each agent
-3. **Event Recording**: Capture handoffs, errors, and outputs
-4. **Memory Updates**: Update project memory with new information
-5. **Summarization**: Automatically summarize when needed
-6. **Persistence**: Save updated memory for future runs
+### 2. **File Management**
+- Prevents duplicate file creation
+- Agents know what files exist from previous sessions
+- Efficient resource utilization
 
-## 🎭 Agent Memory Specialization
+### 3. **Project Context**
+- Maintains project state across sessions
+- Conversation summaries for future reference
+- Easy to understand what has been done before
 
-Each agent leverages memory differently:
+### 4. **Educational Value**
+- Simple, bare-minimum implementation
+- Easy to understand and modify
+- Demonstrates core concepts without over-engineering
 
-### Planner Agent
-- Reviews project history and architecture decisions
-- Learns from previous planning successes and failures
-- Avoids repeating unsuccessful approaches
-- Builds on existing architectural patterns
+## Technical Details
 
-### Coder Agent
-- Checks existing files and implementation patterns
-- Learns from previous code quality issues
-- Maintains consistency with project standards
-- Builds incrementally on existing code
+### Memory Storage
+- Uses JSON files for persistence (`memory_{session_id}.json`)
+- Each session has its own memory file
+- Human-readable format for debugging
 
-### Reviewer Agent
-- Maintains consistent quality standards
-- Learns from previous review feedback
-- Validates against project requirements
-- Updates lessons learned with new insights
+### Session Management
+- Uses OpenAI Agents SDK `SQLiteSession` for conversation memory
+- Automatic conversation history management
+- Separate sessions for different users/projects
 
-### Triage Agent
-- Makes better routing decisions with context
-- Tracks workflow patterns and optimizations
-- Maintains awareness of project progress
-- Identifies and addresses blockers
+### Hook System
+- Extends the existing `RunHooks` class
+- Simple `on_tool_call_end` hook for file tracking
+- Minimal implementation that's easy to understand
 
-## 🚀 Usage Examples
+## Installation & Setup
 
-### Basic Usage
-```python
-# Create context with memory
-context = ProjectContext(
-    project_name="MyProject",
-    requirements="Build a web API",
-    current_stage="planning"
-)
-
-# Run with memory
-result = await run_multi_agent_system_with_memory(
-    user_request="Add authentication to the API",
-    project_name="MyProject"
-)
+1. Install dependencies:
+```bash
+pip install agents composio-openai-agents python-dotenv
 ```
 
-### Memory-Aware Development
-```python
-# The system automatically:
-# 1. Loads existing project memory
-# 2. Provides context to agents
-# 3. Records all interactions
-# 4. Updates memory with new information
-# 5. Summarizes when needed
-# 6. Saves updated memory
+2. Set up environment variables:
+```bash
+OPENAI_API_KEY=your_api_key_here
 ```
 
-## 📁 File Structure
+3. Run the demo:
+```bash
+python state_multi_agent_system.py
+```
+
+## File Structure
 
 ```
 4-state-management/
-├── state_management_multi_agent_system.py  # Main system with memory
-├── requirements.txt                        # Dependencies
-├── README.md                              # This file
-├── .env.example                           # Environment variables
-└── memory/                                # Memory storage directory
-    ├── ProjectName_memory.json            # Project memory files
-    └── conversation_summaries/            # Conversation archives
+├── state_multi_agent_system.py  # Main system with state management
+├── README.md                    # This file
+├── memory_demo_session.json     # Example memory file (created at runtime)
+└── .composio.lock              # Composio configuration
 ```
 
-## 🎯 Key Takeaways
+## Next Steps
 
-1. **Memory is Critical**: As agents become more sophisticated, memory becomes essential for quality and efficiency
-2. **Context Management**: Proper context window management through summarization is crucial
-3. **Learning from History**: Agents that learn from past experiences perform better
-4. **Persistent State**: Project memory should persist across sessions
-5. **Integration**: Memory should be seamlessly integrated into the agent workflow
+This implementation provides a solid foundation for state management in multi-agent systems. You can extend it by:
 
-## 🔍 Performance Benefits
+1. Adding more sophisticated memory types (vector databases, embeddings)
+2. Implementing memory search and retrieval
+3. Adding memory expiration and cleanup
+4. Creating more advanced summarization techniques
+5. Adding memory sharing between different projects
 
-| Metric | Without Memory | With Memory | Improvement |
-|--------|----------------|-------------|-------------|
-| Duplicate Work | 25% | 5% | -80% |
-| Context Quality | 6/10 | 9/10 | +50% |
-| Error Rates | 15% | 8% | -47% |
-| Development Speed | Baseline | 1.3x | +30% |
-
-## 🚀 Getting Started
-
-1. **Install Dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-2. **Set Environment Variables**:
-   ```bash
-   export OPENAI_API_KEY="your-api-key"
-   export COMPOSIO_API_KEY="your-composio-key"
-   ```
-
-3. **Run the System**:
-   ```bash
-   python state_management_multi_agent_system.py
-   ```
-
-## 🔮 Future Enhancements
-
-- **Vector Database Integration**: For semantic memory retrieval
-- **Memory Compression**: Advanced summarization techniques
-- **Multi-Project Memory**: Sharing lessons across projects
-- **Memory Analytics**: Insights into memory usage patterns
-- **Adaptive Summarization**: Dynamic summarization based on content importance
-
-The state management system provides a solid foundation for building production-ready AI agents with persistent memory and learning capabilities! 
+The current implementation is intentionally kept simple to demonstrate the core concepts and mechanisms that make state management work in multi-agent systems. 
