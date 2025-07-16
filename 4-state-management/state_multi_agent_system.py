@@ -146,14 +146,15 @@ class StateManagementHooks(RunHooks):
     async def on_handoff(self, context: RunContextWrapper, from_agent: Agent, to_agent: Agent) -> None:
         print(f"🔄 Handoff from {from_agent.name} to {to_agent.name}")
     
-    async def on_tool_call_end(self, context: RunContextWrapper, agent: Agent, tool: Tool, result: str) -> None:
+    async def on_tool_end(self, context: RunContextWrapper, agent: Agent, tool: Tool, result: str) -> None:
         """Track file creation to prevent duplicates"""
         print(f"🔄 Tool call end: {tool.name}")
-        if tool.name == 'filetool_create_file':
+        if tool.name == 'FILETOOL_CREATE_FILE':
             try:
+                result = json.loads(result)
                 # Parse the arguments to get filename
-                args = json.loads(tool.arguments)
-                filename = args.get('file_path', '')
+                filename = result.get('data', {}).get('path', '')
+                print(f"🔄 Filename created: {filename}")
                 
                 if filename and filename not in self.context.files_created:
                     self.context.files_created.append(filename)

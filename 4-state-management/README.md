@@ -1,3 +1,33 @@
+# Simple Python Calculator
+
+A command-line calculator with basic operations (add, subtract, multiply, divide).
+## Usage
+
+```
+python main.py <operation> <a> <b>
+```
+
+- `<operation>`: `add`, `sub`, `mul`, or `div`
+- `<a>` and `<b>`: numeric (float/int) operands
+
+### Examples
+
+Addition:
+```
+python main.py add 2 5
+# Result: 7.0
+```
+
+Division by zero:
+```
+python main.py div 7 0
+# Error: Division by zero
+```
+
+## Files
+- `main.py`: CLI interface
+- `operations.py`: Calculator functions
+
 # Multi-Agent Software Development System with State Management
 
 This module builds upon the previous multi-agent system by adding sophisticated state management capabilities. The system now remembers conversations across runs, tracks file creation to prevent duplicates, and maintains a simple memory layer for project context.
