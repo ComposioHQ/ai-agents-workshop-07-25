@@ -1,0 +1,14 @@
+# OpenAI API Configuration
+OPENAI_API_KEY=your-openai-api-key-here
+
+# Composio API Configuration
+COMPOSIO_API_KEY=your-composio-api-key-here
+
+# Memory Configuration (Optional)
+MEMORY_DIR=memory
+MAX_CONVERSATION_LENGTH=50
+MAX_TOKENS_PER_CONVERSATION=10000
+
+# Tracing Configuration (Optional)
+ENABLE_TRACING=true
+TRACE_NAME=state-management-multi-agent 
