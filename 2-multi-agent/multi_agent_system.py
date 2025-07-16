@@ -27,21 +27,6 @@ from composio_openai_agents import ComposioToolSet, Action, App
 # Load environment variables
 load_dotenv()
 
-@dataclass
-class ProjectContext:
-    """Context shared across all agents"""
-    project_name: str
-    requirements: str
-    current_stage: str = "planning"
-    files_created: List[str] = None
-    test_results: Dict[str, Any] = None
-    
-    def __post_init__(self):
-        if self.files_created is None:
-            self.files_created = []
-        if self.test_results is None:
-            self.test_results = {}
-
 # Initialize Composio toolset
 composio_toolset = ComposioToolSet()
 
@@ -103,7 +88,7 @@ file_tools = composio_toolset.get_tools(actions=[
 ])
 
 # Create specialized agents
-def create_planner_agent() -> Agent[ProjectContext]:
+def create_planner_agent() -> Agent:
     """Create the Planner agent - breaks down requirements into tasks"""
     return Agent(
         name="Planner",
@@ -133,7 +118,7 @@ def create_planner_agent() -> Agent[ProjectContext]:
         tools=file_tools,  # Can read existing files for context
     )
 
-def create_coder_agent() -> Agent[ProjectContext]:
+def create_coder_agent() -> Agent:
     """Create the Coder agent - implements the actual code"""
     return Agent(
         name="Coder",
@@ -165,7 +150,7 @@ def create_coder_agent() -> Agent[ProjectContext]:
         tools=[run_python_code] + file_tools,
     )
 
-def create_reviewer_agent() -> Agent[ProjectContext]:
+def create_reviewer_agent() -> Agent:
     """Create the Reviewer agent - reviews and validates code"""
     return Agent(
         name="Reviewer",
@@ -199,7 +184,7 @@ def create_reviewer_agent() -> Agent[ProjectContext]:
         tools=[run_python_code] + file_tools,
     )
 
-def create_triage_agent() -> Agent[ProjectContext]:
+def create_triage_agent() -> Agent:
     """Create the Triage agent - orchestrates the workflow"""
     
     # Create the specialized agents
@@ -257,13 +242,6 @@ async def run_multi_agent_system(
     print(f"🎯 Request: {user_request}")
     print("=" * 60)
     
-    # Create project context
-    context = ProjectContext(
-        project_name=project_name,
-        requirements=user_request,
-        current_stage="planning"
-    )
-    
     # Create the triage agent
     triage_agent = create_triage_agent()
     
@@ -277,7 +255,6 @@ async def run_multi_agent_system(
         result = await Runner.run(
             starting_agent=triage_agent,
             input=user_request,
-            context=context,
             run_config=run_config,
             max_turns=50  # Allow for multiple handoffs
         )
