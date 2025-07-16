@@ -1,6 +1,6 @@
-# Production AI Agents Workshop 🤖
+# Graduating your AI Agents Workshop 🤖
 
-Welcome to the **Production AI Agents Workshop**! This repository contains a comprehensive, hands-on tutorial for building AI agents that are ready for production use.
+Welcome to the **Graduating your AI Agents Workshop**! This repository contains a comprehensive, hands-on tutorial for building AI agents that are ready for production use.
 
 ## 🎯 Workshop Overview
 
@@ -52,7 +52,7 @@ By the end of this workshop, you'll have built:
 
 **What you'll build:**
 - A coding agent that can write, execute, and test Python code
-- Integration with file system operations
+- Integration with file system operations using Composio's FileTool app
 - A simple REPL (Read-Eval-Print Loop) tool
 
 **Key files:**
@@ -87,51 +87,46 @@ By the end of this workshop, you'll have built:
 
 ---
 
-### 🧠 [Module 3: State Management & Lifecycle](./3-state-management/) (30 min)
-
-**Memory, context, and lifecycle management**
-
-**What you'll learn:**
-- State persistence patterns
-- Memory management for long-running agents
-- Lifecycle hooks (pre/post execution)
-- Context window management
-
-**What you'll build:**
-- Persistent agent memory system
-- Context-aware agents
-- Lifecycle event handlers
-- State serialization and recovery
-
-**Key concepts:**
-- Short-term vs. long-term memory
-- Context retrieval and relevance
-- State validation and consistency
-- Recovery from failures
-
----
-
-### 🔍 [Module 4: Tracing & Observability](./4-tracing-observability/) (20 min)
+### 🔍 [Module 3: Tracing & Observability](./3-tracing-observability/) (20 min)
 
 **Monitoring, debugging, and performance optimization**
 
 **What you'll learn:**
-- Distributed tracing for agent systems
+- Tracing for agent systems
 - Performance monitoring and alerting
 - Debugging complex agent behaviors
 - Integration with observability platforms
+- Lifecycle hooks (pre/post execution)
 
 **What you'll build:**
 - Comprehensive logging system
 - Trace correlation across agent calls
-- Performance metrics and dashboards
 - Error tracking and alerting
+- Lifecycle event handlers
 
 **Key concepts:**
-- OpenTelemetry integration
 - Structured logging
 - Performance bottleneck identification
 - Real-time monitoring
+- Hook-based instrumentation
+
+---
+
+### 🧠 [Module 4: State Management](./4-state-management/) (30 min)
+
+**Memory and context management**
+
+**What you'll learn:**
+- State persistence patterns
+- Memory management for long-running agents
+
+**What you'll build:**
+- Persistent agent memory system
+- Context-aware agents
+
+**Key concepts:**
+- Short-term vs. long-term memory
+- Context retrieval and relevance
 
 ---
 
@@ -141,21 +136,14 @@ By the end of this workshop, you'll have built:
 
 **What you'll learn:**
 - Agent evaluation frameworks
-- Golden dataset creation
 - LLM-based evaluation techniques
-- Continuous testing and deployment
 
 **What you'll build:**
 - Automated evaluation pipeline
 - Performance benchmarking system
-- Regression testing framework
-- Quality metrics and reporting
 
 **Key concepts:**
 - Evaluation metrics design
-- A/B testing for agents
-- Performance regression detection
-- Continuous improvement workflows
 
 ---
 
@@ -203,8 +191,8 @@ Start with Module 1 and work through each module sequentially. Each module build
 ### For Intermediate Developers
 You can jump to specific modules based on your interests:
 - **Multi-agent patterns** → Module 2
-- **State management** → Module 3
-- **Monitoring** → Module 4
+- **Monitoring** → Module 3
+- **State management** → Module 4
 - **Testing** → Module 5
 
 ### For Advanced Users

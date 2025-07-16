@@ -294,10 +294,10 @@ This implementation shows the core concepts without the SDK abstraction.
 
 ## 🎯 Next Steps
 
-Ready to continue? In **Module 3: State Management**, we'll add:
+Ready to continue? In **Module 4: State Management**, we'll add:
 - Persistent memory across sessions
 - Context management for long conversations
-- Lifecycle hooks for validation and logging
+- State serialization and recovery
 - Recovery from failures
 
 ## 🤝 Contributing

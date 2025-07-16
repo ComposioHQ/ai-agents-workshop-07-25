@@ -294,9 +294,9 @@ This implementation shows the core concepts without the SDK abstraction.
 
 ## 🎯 Next Steps
 
-Ready to continue? In **Module 3: State Management**, we'll add:
-- Persistent memory across sessions
-- Context management for long conversations
+Ready to continue? In **Module 3: Tracing & Observability**, we'll add:
+- Distributed tracing for agent systems
+- Performance monitoring and alerting
 - Lifecycle hooks for validation and logging
 - Recovery from failures
 
