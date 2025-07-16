@@ -1,0 +1,12 @@
+# OpenAI API Key - Required for all agent operations
+OPENAI_API_KEY=your_openai_api_key_here
+
+# Composio API Key - Optional, for enhanced file operations
+COMPOSIO_API_KEY=your_composio_api_key_here
+
+# Optional: OpenAI API Base URL (if using a proxy or alternative endpoint)
+# OPENAI_API_BASE=https://api.openai.com/v1
+
+# Optional: Model settings
+# DEFAULT_MODEL=gpt-4.1
+# FALLBACK_MODEL=gpt-4.1-mini 
