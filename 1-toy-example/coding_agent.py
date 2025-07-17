@@ -29,6 +29,9 @@ from composio_openai import ComposioToolSet, Action
 # Setup OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+# Honor the default model from environment variable or use gpt-4
+DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gpt-4")
+
 # Setup Composio toolset for file operations
 composio_toolset = ComposioToolSet()
 
@@ -96,9 +99,7 @@ def create_coding_agent():
     file_tools = composio_toolset.get_tools(actions=[
         Action.FILETOOL_CREATE_FILE,
         Action.FILETOOL_EDIT_FILE,
-        Action.FILETOOL_READ_FILE,
         Action.FILETOOL_LIST_FILES,
-        Action.FILETOOL_DELETE_FILE,
     ])
     
     # Define the Python REPL tool
@@ -140,7 +141,7 @@ Always explain what you're doing and why, and make sure to test your code thorou
 """
     
     return {
-        "model": "gpt-4",
+        "model": DEFAULT_MODEL,
         "tools": [python_repl_tool] + file_tools,
         "system_instructions": system_instructions
     }
