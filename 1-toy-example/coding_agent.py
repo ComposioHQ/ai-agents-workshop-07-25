@@ -96,9 +96,7 @@ def create_coding_agent():
     file_tools = composio_toolset.get_tools(actions=[
         Action.FILETOOL_CREATE_FILE,
         Action.FILETOOL_EDIT_FILE,
-        Action.FILETOOL_READ_FILE,
         Action.FILETOOL_LIST_FILES,
-        Action.FILETOOL_DELETE_FILE,
     ])
     
     # Define the Python REPL tool
@@ -134,13 +132,13 @@ When asked to create a function:
 1. First, write the function code
 2. Then, create test cases to verify it works correctly
 3. Execute the code to show the results
-4. If requested, save the code to a file
+4. Always save the code to a file (example: "my_function.py")
 
 Always explain what you're doing and why, and make sure to test your code thoroughly.
 """
     
     return {
-        "model": "gpt-4",
+        "model": "gpt-4.1",
         "tools": [python_repl_tool] + file_tools,
         "system_instructions": system_instructions
     }
@@ -200,7 +198,7 @@ def run_agent(user_request: str) -> str:
                 # Handle Composio file tools
                 else:
                     try:
-                        result = composio_toolset.handle_tool_call(tool_call)
+                        result = composio_toolset.handle_tool_calls(tool_call)
                         print(f"   Result: {result}")
                     except Exception as e:
                         result = f"Error: {str(e)}"

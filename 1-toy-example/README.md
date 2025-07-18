@@ -119,7 +119,7 @@ Here's what a typical session looks like:
 ### Agent Architecture
 
 ```
-User Request → Agent (GPT-4) → Tool Calls → Tool Results → Agent Response
+User Request → Agent (gpt-4.1) → Tool Calls → Tool Results → Agent Response
                     ↑                            ↓
                     ←──── Iterative Loop ────────
 ```
