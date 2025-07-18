@@ -198,7 +198,7 @@ def run_agent(user_request: str) -> str:
                 # Handle Composio file tools
                 else:
                     try:
-                        result = composio_toolset.handle_tool_calls(tool_call)
+                        result = composio_toolset.handle_tool_calls(response)
                         print(f"   Result: {result}")
                     except Exception as e:
                         result = f"Error: {str(e)}"
